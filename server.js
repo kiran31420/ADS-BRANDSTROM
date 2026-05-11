@@ -21,6 +21,8 @@ const AD_FORMATS = [
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'static')));
 
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
 async function fbGet(url, params = {}) {
   const qs  = new URLSearchParams({ access_token: TOKEN, ...params });
   const res = await fetch(`${url}?${qs}`);
