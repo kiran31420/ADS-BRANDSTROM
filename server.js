@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path    = require('path');
-const fetch   = (...args) => import('node-fetch').then(({default: f}) => f(...args));
+const fetch   = require('node-fetch');
 
 const app      = express();
 const TOKEN    = process.env.FB_ACCESS_TOKEN || '';
