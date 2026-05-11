@@ -1,0 +1,13 @@
+{
+  "name": "facebook-ads-preview",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5",
+    "puppeteer": "^22.15.0"
+  }
+}

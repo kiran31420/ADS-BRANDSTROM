@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facebook Ads Preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #1c1e21; }
+
+  header {
+    background: #1877f2; color: white;
+    padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header small { font-size: 12px; opacity: .75; margin-left: auto; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+  /* Account selector */
+  .account-bar {
+    background: white; border-radius: 12px; padding: 14px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.1); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .account-bar label { font-size: 13px; font-weight: 600; color: #65676b; white-space: nowrap; }
+  .account-bar select {
+    flex: 1; padding: 10px 14px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 14px; background: white; outline: none; cursor: pointer;
+  }
+  .account-bar select:focus { border-color: #1877f2; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+  .dot.active { background: #42b72a; }
+
+  /* Search */
+  .search-box {
+    background: white; border-radius: 12px; padding: 16px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.1); margin-bottom: 16px;
+  }
+  .search-row { display: flex; gap: 10px; align-items: center; }
+  .search-row input {
+    flex: 1; padding: 11px 16px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 15px; outline: none; transition: border .2s;
+  }
+  .search-row input:focus { border-color: #1877f2; }
+  .search-row select {
+    padding: 11px 14px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 14px; background: white; outline: none; cursor: pointer;
+  }
+  .btn-search {
+    padding: 11px 22px; background: #1877f2; color: white; border: none;
+    border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s;
+  }
+  .btn-search:hover { background: #166fe5; }
+  .btn-search:disabled { background: #aaa; cursor: not-allowed; }
+
+  .error-msg {
+    background: #fff3f3; border: 1px solid #ffcccc; border-radius: 8px;
+    padding: 10px 14px; color: #c00; font-size: 13px; margin-top: 10px; display: none;
+  }
+
+  /* Results */
+  .results-box {
+    background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.1);
+    margin-bottom: 16px; overflow: hidden; display: none;
+  }
+  .results-header {
+    padding: 12px 20px; background: #f7f8fa; border-bottom: 1px solid #e4e6ea;
+    font-weight: 600; font-size: 13px; color: #65676b;
+  }
+  .result-item {
+    display: flex; align-items: center; padding: 12px 20px;
+    border-bottom: 1px solid #f0f2f5; cursor: pointer; transition: background .15s; gap: 12px;
+  }
+  .result-item:hover { background: #f0f2f5; }
+  .result-item:last-child { border-bottom: none; }
+  .result-item.active { background: #e7f0ff; }
+  .result-name { flex: 1; font-size: 14px; font-weight: 500; }
+  .result-id { font-size: 11px; color: #65676b; }
+  .badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; text-transform: uppercase; }
+  .badge-active   { background: #e6f4ea; color: #1e7e34; }
+  .badge-paused   { background: #fff3cd; color: #856404; }
+  .badge-archived { background: #f8d7da; color: #721c24; }
+
+  /* Preview */
+  .preview-box {
+    background: white; border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.1); display: none;
+  }
+  .preview-header {
+    padding: 14px 20px; border-bottom: 1px solid #e4e6ea;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .preview-title  { font-weight: 700; font-size: 15px; }
+  .preview-sub    { font-size: 11px; color: #65676b; margin-top: 2px; }
+
+  .tabs { display: flex; padding: 0 20px; border-bottom: 1px solid #e4e6ea; overflow-x: auto; }
+  .tab-btn {
+    padding: 11px 15px; border: none; background: none; font-size: 13px;
+    font-weight: 500; color: #65676b; cursor: pointer;
+    border-bottom: 3px solid transparent; white-space: nowrap; transition: all .15s;
+  }
+  .tab-btn:hover { color: #1877f2; }
+  .tab-btn.active { color: #1877f2; border-bottom-color: #1877f2; }
+
+  .preview-content { padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 380px; }
+  .frame-wrap {
+    background: #f0f2f5; border-radius: 12px; padding: 16px;
+    display: flex; justify-content: center; width: 100%; min-height: 320px;
+  }
+  .frame-wrap iframe { border: none; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,.15); background: white; }
+
+  .preview-loading { display: flex; align-items: center; justify-content: center; height: 280px; font-size: 13px; color: #65676b; gap: 10px; }
+  .spinner { width: 18px; height: 18px; border: 3px solid #e4e6ea; border-top-color: #1877f2; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .action-bar { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; justify-content: center; }
+  .btn-act {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: 8px; font-size: 13px;
+    font-weight: 600; cursor: pointer; border: none; transition: all .15s;
+  }
+  .btn-shot  { background: #42b72a; color: white; }
+  .btn-shot:hover { background: #36a420; }
+  .btn-tab   { background: #f0f2f5; color: #1c1e21; border: 1px solid #ddd; }
+  .btn-tab:hover { background: #e4e6ea; }
+  .btn-act:disabled { opacity: .5; cursor: not-allowed; }
+
+  .empty { text-align: center; padding: 36px; color: #65676b; }
+  .empty .icon { font-size: 36px; margin-bottom: 10px; }
+  .empty p { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:22px">📸</span>
+  <h1>Facebook Ads Preview</h1>
+  <small>ดู Preview ทุก Placement</small>
+</header>
+
+<div class="container">
+
+  <!-- Account Selector -->
+  <div class="account-bar">
+    <label>📁 Ad Account</label>
+    <div class="dot" id="acctDot"></div>
+    <select id="accountSelect" onchange="onAccountChange()">
+      <option value="">⏳ กำลังโหลด Account...</option>
+    </select>
+  </div>
+
+  <!-- Search -->
+  <div class="search-box">
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="พิมพ์ชื่อ Ad หรือ Campaign..." autocomplete="off">
+      <select id="searchType">
+        <option value="ad">🔵 Ad</option>
+        <option value="campaign">📁 Campaign</option>
+      </select>
+      <button class="btn-search" id="searchBtn" onclick="doSearch()">🔍 ค้นหา</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-box" id="resultsBox">
+    <div class="results-header" id="resultsHeader">ผลการค้นหา</div>
+    <div id="resultsList"></div>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-box" id="previewBox">
+    <div class="preview-header">
+      <div>
+        <div class="preview-title" id="previewTitle">—</div>
+        <div class="preview-sub" id="previewSub">—</div>
+      </div>
+    </div>
+    <div class="tabs" id="tabsRow"></div>
+    <div class="preview-content">
+      <div class="frame-wrap" id="frameWrap">
+        <div class="empty"><div class="icon">👆</div><p>เลือก Ad จากรายการด้านบน</p></div>
+      </div>
+      <div class="action-bar" id="actionBar" style="display:none">
+        <button class="btn-act btn-tab" onclick="openNewTab()">🔗 เปิดในแท็บใหม่</button>
+        <button class="btn-act btn-shot" id="btnShot" onclick="takeScreenshot()">📸 Screenshot & ดาวน์โหลด</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let allPreviews = [], currentIdx = 0, currentAdId = '', currentAdName = '';
+
+// ── Load accounts on startup ──────────────────────────────
+window.addEventListener('load', loadAccounts);
+document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+async function loadAccounts() {
+  try {
+    const resp = await fetch('/api/accounts');
+    const data = await resp.json();
+    const sel = document.getElementById('accountSelect');
+    sel.innerHTML = data.accounts.map(a =>
+      `<option value="${a.id}" data-active="${a.active}">${a.name}${a.active ? '' : ' (ปิด)'}</option>`
+    ).join('');
+    onAccountChange();
+  } catch(e) {
+    document.getElementById('accountSelect').innerHTML = '<option value="">❌ โหลด Account ไม่ได้ — เช็ก Token</option>';
+    showError('โหลด Account ไม่ได้ ตรวจสอบ Access Token และ Server');
+  }
+}
+
+function onAccountChange() {
+  const sel = document.getElementById('accountSelect');
+  const opt = sel.selectedOptions[0];
+  const isActive = opt && opt.dataset.active === 'true';
+  document.getElementById('acctDot').className = 'dot' + (isActive ? ' active' : '');
+}
+
+// ── Search ────────────────────────────────────────────────
+function showError(msg) { const e = document.getElementById('errorMsg'); e.textContent = '❌ ' + msg; e.style.display = 'block'; }
+function hideError()     { document.getElementById('errorMsg').style.display = 'none'; }
+
+async function doSearch() {
+  const q    = document.getElementById('searchInput').value.trim();
+  const type = document.getElementById('searchType').value;
+  const acct = document.getElementById('accountSelect').value;
+  if (!q) return;
+  if (!acct) { showError('กรุณาเลือก Ad Account ก่อน'); return; }
+
+  hideError();
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังค้นหา...';
+
+  try {
+    const resp = await fetch(`/api/search?q=${encodeURIComponent(q)}&search_type=${type}&account_id=${acct}`);
+    const data = await resp.json();
+    if (!resp.ok) { showError(data.detail || 'เกิดข้อผิดพลาด'); return; }
+    renderResults(data.results, type);
+  } catch(e) {
+    showError('เชื่อมต่อ Server ไม่ได้ ตรวจสอบว่า Server รันอยู่');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔍 ค้นหา';
+  }
+}
+
+function renderResults(results, type) {
+  const box = document.getElementById('resultsBox');
+  box.style.display = 'block';
+  document.getElementById('resultsHeader').textContent = `พบ ${results.length} รายการ (${type === 'campaign' ? 'Campaign' : 'Ad'})`;
+
+  if (!results.length) {
+    document.getElementById('resultsList').innerHTML = `<div class="empty"><div class="icon">🔍</div><p>ไม่พบรายการที่ตรงกัน</p></div>`;
+    return;
+  }
+  document.getElementById('resultsList').innerHTML = results.map((item, i) => `
+    <div class="result-item" id="ri-${i}" onclick="selectItem('${item.id}','${esc(item.name)}','${item.type}',${i})">
+      <div class="result-name">${item.name}</div>
+      <div class="result-id">ID: ${item.id}</div>
+      <span class="badge ${badgeCls(item.status)}">${item.status || '—'}</span>
+    </div>
+  `).join('');
+}
+
+async function selectItem(id, name, type, idx) {
+  document.querySelectorAll('.result-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`ri-${idx}`).classList.add('active');
+
+  if (type === 'campaign') {
+    const resp = await fetch(`/api/campaign-ads/${id}`);
+    const data = await resp.json();
+    renderResults(data.results.map(a => ({...a, type: 'ad'})), 'ad');
+    return;
+  }
+  currentAdId = id; currentAdName = name;
+  loadPreviews(id, name);
+}
+
+// ── Previews ──────────────────────────────────────────────
+async function loadPreviews(adId, adName) {
+  const box = document.getElementById('previewBox');
+  box.style.display = 'block';
+  document.getElementById('previewTitle').textContent = adName;
+  document.getElementById('previewSub').textContent   = `ID: ${adId}`;
+  document.getElementById('tabsRow').innerHTML  = '<div style="padding:12px 20px;font-size:13px;color:#65676b">⏳ กำลังโหลด Preview...</div>';
+  document.getElementById('frameWrap').innerHTML = '<div class="preview-loading"><div class="spinner"></div> กำลังโหลด...</div>';
+  document.getElementById('actionBar').style.display = 'none';
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  try {
+    const resp = await fetch(`/api/preview/${adId}`);
+    const data = await resp.json();
+    allPreviews = data.previews || [];
+
+    if (!allPreviews.length) {
+      document.getElementById('tabsRow').innerHTML  = '';
+      document.getElementById('frameWrap').innerHTML = '<div class="empty"><div class="icon">😕</div><p>ไม่พบ Preview สำหรับ Ad นี้</p></div>';
+      return;
+    }
+    renderTabs(); showPreview(0);
+  } catch(e) {
+    document.getElementById('frameWrap').innerHTML = '<div class="empty"><div class="icon">❌</div><p>โหลด Preview ไม่ได้</p></div>';
+  }
+}
+
+function renderTabs() {
+  document.getElementById('tabsRow').innerHTML = allPreviews.map((p, i) =>
+    `<button class="tab-btn ${i===0?'active':''}" id="tab-${i}" onclick="showPreview(${i})">${p.label}</button>`
+  ).join('');
+}
+
+function showPreview(idx) {
+  currentIdx = idx;
+  document.querySelectorAll('.tab-btn').forEach((t,i) => t.classList.toggle('active', i===idx));
+
+  const p = allPreviews[idx]; if (!p) return;
+  let w = 500, h = 620;
+  if (p.format.includes('STORY') || p.format.includes('REELS')) { w = 375; h = 740; }
+  else if (p.format.includes('MOBILE') || p.format.includes('INSTAGRAM'))  { w = 375; h = 620; }
+
+  document.getElementById('frameWrap').innerHTML =
+    `<iframe src="${p.src}" width="${w}" height="${h}" scrolling="no" allowtransparency="true"></iframe>`;
+  document.getElementById('actionBar').style.display = 'flex';
+}
+
+function openNewTab() {
+  const p = allPreviews[currentIdx]; if (p) window.open(p.src, '_blank');
+}
+
+async function takeScreenshot() {
+  const p = allPreviews[currentIdx]; if (!p) return;
+  const btn = document.getElementById('btnShot');
+  btn.disabled = true; btn.textContent = '⏳ กำลัง Screenshot...';
+
+  try {
+    const resp = await fetch('/api/screenshot', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({src: p.src})
+    });
+    const data = await resp.json();
+    if (!resp.ok) { alert('❌ ' + (data.detail || 'Screenshot ล้มเหลว')); return; }
+
+    const a = document.createElement('a');
+    a.href = 'data:image/png;base64,' + data.image;
+    a.download = `${currentAdName}_${p.format}.png`.replace(/[^\w฀-๿._-]/g,'_');
+    a.click();
+  } catch(e) {
+    alert('❌ Screenshot ไม่สำเร็จ: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '📸 Screenshot & ดาวน์โหลด';
+  }
+}
+
+function badgeCls(s) {
+  if (!s) return '';
+  s = s.toUpperCase();
+  return s==='ACTIVE'?'badge-active': s==='PAUSED'?'badge-paused':'badge-archived';
+}
+function esc(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,''); }
+</script>
+</body>
+</html>
