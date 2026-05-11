@@ -52,8 +52,8 @@ app.get('/api/search', async (req, res) => {
 
   const endpoint = search_type === 'campaign' ? 'campaigns' : 'ads';
   const fields   = search_type === 'campaign'
-    ? 'id,name,status,effective_status,start_time,stop_time,objective'
-    : 'id,name,status,effective_status,start_time,stop_time';
+    ? 'id,name,status,effective_status,objective'
+    : 'id,name,status,effective_status';
 
   const params = { fields, limit: 100 };
   if (filters.length) params.filtering = JSON.stringify(filters);
@@ -68,8 +68,8 @@ app.get('/api/search', async (req, res) => {
       name:       item.name,
       status:     item.effective_status || item.status || '',
       type:       search_type,
-      start_time: item.start_time || '',
-      stop_time:  item.stop_time  || '',
+      start_time: '',
+      stop_time:  '',
     }))
   });
 });
