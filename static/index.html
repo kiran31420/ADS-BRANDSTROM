@@ -188,10 +188,6 @@
     </div>
 
     <div class="filter-row">
-      <label>📅 วิ่งอยู่วันที่</label>
-      <input type="date" id="dateFilter">
-      <button class="status-btn" style="font-size:11px;padding:6px 10px" onclick="clearDate()">✕ ล้าง</button>
-      <div class="filter-divider"></div>
       <label>สถานะ</label>
       <div class="status-btns">
         <button class="status-btn all-btn" id="sAll"    onclick="setStatus('ALL'   )">ทั้งหมด</button>
@@ -237,10 +233,7 @@ let currentStatus = 'ALL';
 let allResults = [];
 
 // ── Load accounts on startup ──────────────────────────────
-window.addEventListener('load', () => {
-  loadAccounts();
-  document.getElementById('dateFilter').value = new Date().toISOString().slice(0,10);
-});
+window.addEventListener('load', loadAccounts);
 document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
 function setStatus(s) {
@@ -252,23 +245,9 @@ function setStatus(s) {
   applyStatusFilter();
 }
 
-function clearDate() {
-  document.getElementById('dateFilter').value = '';
-}
-
 function applyStatusFilter() {
   if (!allResults.length) return;
-  const date = document.getElementById('dateFilter').value;
   let filtered = allResults;
-
-  // If date selected, also exclude ads whose stop_time is before that date
-  if (date) {
-    const sel = new Date(date).getTime();
-    filtered = filtered.filter(r => {
-      if (!r.stop_time) return true; // no end date = still running
-      return new Date(r.stop_time).getTime() >= sel;
-    });
-  }
 
   if (currentStatus === 'ACTIVE') {
     filtered = filtered.filter(r => ['ACTIVE','IN_PROCESS','WITH_ISSUES'].includes(r.status.toUpperCase()));
@@ -315,10 +294,8 @@ async function doSearch() {
   const btn = document.getElementById('searchBtn');
   btn.disabled = true; btn.textContent = '⏳ กำลังค้นหา...';
 
-  const date   = document.getElementById('dateFilter').value;
   const params = new URLSearchParams({ search_type: type, account_id: acct });
   if (q) params.append('q', q);
-  if (date) params.append('date', date);
 
   try {
     const resp = await fetch(`/api/search?${params}`);
