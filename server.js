@@ -90,9 +90,13 @@ app.post('/api/screenshot', async (req, res) => {
   const { src } = req.body;
   if (!src) return res.status(400).json({ error: 'src required' });
 
+  let puppeteer;
+  try { puppeteer = require('puppeteer'); } catch {
+    return res.status(503).json({ detail: 'Screenshot ไม่รองรับบน Server นี้ กรุณาใช้ปุ่ม "เปิดในแท็บใหม่" แทนครับ' });
+  }
+
   let browser;
   try {
-    const puppeteer = require('puppeteer');
     browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
     await page.setViewport({ width: 540, height: 960 });

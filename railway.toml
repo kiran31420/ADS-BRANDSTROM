@@ -1,5 +1,9 @@
 [build]
 builder = "nixpacks"
 
+[build.env]
+PUPPETEER_SKIP_DOWNLOAD = "true"
+NPM_CONFIG_PRODUCTION = "false"
+
 [deploy]
 startCommand = "node server.js"
