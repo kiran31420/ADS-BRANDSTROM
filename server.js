@@ -47,14 +47,8 @@ app.get('/api/search', async (req, res) => {
   const { q = '', search_type = 'ad', account_id, date = '' } = req.query;
   if (!account_id) return res.status(400).json({ error: 'account_id จำเป็น' });
 
-  const filters  = [];
+  const filters = [];
   if (q.trim()) filters.push({ field: 'name', operator: 'CONTAIN', value: q.trim() });
-
-  // Filter by start_time <= selected date (campaign was already started on that date)
-  if (date) {
-    const ts = Math.floor(new Date(date + 'T23:59:59').getTime() / 1000);
-    filters.push({ field: 'start_time', operator: 'LESS_THAN_OR_EQUAL', value: ts });
-  }
 
   const endpoint = search_type === 'campaign' ? 'campaigns' : 'ads';
   const fields   = search_type === 'campaign'
