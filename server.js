@@ -44,30 +44,38 @@ app.get('/api/accounts', async (req, res) => {
 
 // ── GET /api/search ───────────────────────────────────────
 app.get('/api/search', async (req, res) => {
-  const { q, search_type = 'ad', account_id, date = '' } = req.query;
-  if (!q || !account_id) return res.status(400).json({ error: 'q และ account_id จำเป็น' });
+  const { q = '', search_type = 'ad', account_id, date = '' } = req.query;
+  if (!account_id) return res.status(400).json({ error: 'account_id จำเป็น' });
 
-  const filters  = [{ field: 'name', operator: 'CONTAIN', value: q }];
+  const filters  = [];
+  if (q.trim()) filters.push({ field: 'name', operator: 'CONTAIN', value: q.trim() });
+
+  // Filter by start_time <= selected date (campaign was already started on that date)
+  if (date) {
+    const ts = Math.floor(new Date(date + 'T23:59:59').getTime() / 1000);
+    filters.push({ field: 'start_time', operator: 'LESS_THAN_OR_EQUAL', value: ts });
+  }
+
   const endpoint = search_type === 'campaign' ? 'campaigns' : 'ads';
   const fields   = search_type === 'campaign'
-    ? 'id,name,status,effective_status,created_time,start_time,stop_time,objective'
-    : 'id,name,status,effective_status,created_time,start_time,stop_time';
+    ? 'id,name,status,effective_status,start_time,stop_time,objective'
+    : 'id,name,status,effective_status,start_time,stop_time';
 
-  const params = { fields, filtering: JSON.stringify(filters), limit: 100 };
-  if (date) params.time_range = JSON.stringify({ since: date, until: date });
+  const params = { fields, limit: 100 };
+  if (filters.length) params.filtering = JSON.stringify(filters);
 
   const data = await fbGet(`${FB_BASE}/act_${account_id}/${endpoint}`, params);
   if (data.error) return res.status(400).json({ detail: data.error.message });
 
+  // Client will filter by status & stop_time — return all fields
   res.json({
     results: (data.data || []).map(item => ({
-      id:           item.id,
-      name:         item.name,
-      status:       item.effective_status || item.status || '',
-      type:         search_type,
-      created_time: item.created_time || '',
-      start_time:   item.start_time   || '',
-      stop_time:    item.stop_time    || '',
+      id:         item.id,
+      name:       item.name,
+      status:     item.effective_status || item.status || '',
+      type:       search_type,
+      start_time: item.start_time || '',
+      stop_time:  item.stop_time  || '',
     }))
   });
 });

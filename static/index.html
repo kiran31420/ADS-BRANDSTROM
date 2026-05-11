@@ -179,7 +179,7 @@
   <!-- Search -->
   <div class="search-box">
     <div class="search-row">
-      <input type="text" id="searchInput" placeholder="พิมพ์ชื่อ Ad หรือ Campaign..." autocomplete="off">
+      <input type="text" id="searchInput" placeholder="พิมพ์ชื่อ Ad / Campaign... (ไม่พิมพ์ก็ได้ จะแสดงทั้งหมด)" autocomplete="off">
       <select id="searchType">
         <option value="ad">🔵 Ad</option>
         <option value="campaign">📁 Campaign</option>
@@ -258,13 +258,24 @@ function clearDate() {
 
 function applyStatusFilter() {
   if (!allResults.length) return;
+  const date = document.getElementById('dateFilter').value;
   let filtered = allResults;
-  if (currentStatus === 'ACTIVE') {
-    filtered = allResults.filter(r => ['ACTIVE','IN_PROCESS','WITH_ISSUES'].includes(r.status.toUpperCase()));
-  } else if (currentStatus === 'PAUSED') {
-    filtered = allResults.filter(r => r.status.toUpperCase() === 'PAUSED');
+
+  // If date selected, also exclude ads whose stop_time is before that date
+  if (date) {
+    const sel = new Date(date).getTime();
+    filtered = filtered.filter(r => {
+      if (!r.stop_time) return true; // no end date = still running
+      return new Date(r.stop_time).getTime() >= sel;
+    });
   }
-  renderResults(filtered, filtered[0]?.type || 'ad');
+
+  if (currentStatus === 'ACTIVE') {
+    filtered = filtered.filter(r => ['ACTIVE','IN_PROCESS','WITH_ISSUES'].includes(r.status.toUpperCase()));
+  } else if (currentStatus === 'PAUSED') {
+    filtered = filtered.filter(r => r.status.toUpperCase() === 'PAUSED');
+  }
+  renderResults(filtered, allResults[0]?.type || 'ad');
 }
 
 async function loadAccounts() {
@@ -305,14 +316,15 @@ async function doSearch() {
   btn.disabled = true; btn.textContent = '⏳ กำลังค้นหา...';
 
   const date   = document.getElementById('dateFilter').value;
-  const params = new URLSearchParams({ q, search_type: type, account_id: acct });
+  const params = new URLSearchParams({ search_type: type, account_id: acct });
+  if (q) params.append('q', q);
   if (date) params.append('date', date);
 
   try {
     const resp = await fetch(`/api/search?${params}`);
     const data = await resp.json();
     if (!resp.ok) { showError(data.detail || 'เกิดข้อผิดพลาด'); return; }
-    allResults = data.results;
+    allResults = data.results || [];
     applyStatusFilter();
   } catch(e) {
     showError('เชื่อมต่อ Server ไม่ได้ ตรวจสอบว่า Server รันอยู่');
