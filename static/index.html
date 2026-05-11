@@ -55,6 +55,30 @@
   .btn-search:hover { background: #166fe5; }
   .btn-search:disabled { background: #aaa; cursor: not-allowed; }
 
+  /* Filter row */
+  .filter-row {
+    display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap;
+  }
+  .filter-row label { font-size: 12px; color: #65676b; font-weight: 600; white-space: nowrap; }
+  .filter-row input[type="date"] {
+    padding: 8px 12px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 13px; outline: none; cursor: pointer;
+  }
+  .filter-row input[type="date"]:focus { border-color: #1877f2; }
+  .filter-divider { width: 1px; height: 24px; background: #ddd; margin: 0 4px; }
+
+  /* Status buttons */
+  .status-btns { display: flex; gap: 6px; }
+  .status-btn {
+    padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid #ddd; background: white; color: #65676b;
+    transition: all .15s;
+  }
+  .status-btn:hover { border-color: #1877f2; color: #1877f2; }
+  .status-btn.active-btn  { background: #e6f4ea; border-color: #42b72a; color: #1e7e34; }
+  .status-btn.paused-btn  { background: #fff3cd; border-color: #ffc107; color: #856404; }
+  .status-btn.all-btn     { background: #e7f0ff; border-color: #1877f2; color: #1877f2; }
+
   .error-msg {
     background: #fff3f3; border: 1px solid #ffcccc; border-radius: 8px;
     padding: 10px 14px; color: #c00; font-size: 13px; margin-top: 10px; display: none;
@@ -78,6 +102,7 @@
   .result-item.active { background: #e7f0ff; }
   .result-name { flex: 1; font-size: 14px; font-weight: 500; }
   .result-id { font-size: 11px; color: #65676b; }
+  .result-date { font-size: 11px; color: #65676b; white-space: nowrap; }
   .badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; text-transform: uppercase; }
   .badge-active   { background: #e6f4ea; color: #1e7e34; }
   .badge-paused   { background: #fff3cd; color: #856404; }
@@ -161,6 +186,21 @@
       </select>
       <button class="btn-search" id="searchBtn" onclick="doSearch()">🔍 ค้นหา</button>
     </div>
+
+    <div class="filter-row">
+      <label>📅 ตั้งแต่วันที่</label>
+      <input type="date" id="dateFrom">
+      <label>ถึง</label>
+      <input type="date" id="dateTo">
+      <div class="filter-divider"></div>
+      <label>สถานะ</label>
+      <div class="status-btns">
+        <button class="status-btn all-btn" id="sAll"    onclick="setStatus('ALL'   )">ทั้งหมด</button>
+        <button class="status-btn"         id="sActive" onclick="setStatus('ACTIVE')">🟢 Active</button>
+        <button class="status-btn"         id="sPaused" onclick="setStatus('PAUSED')">⏸️ Paused</button>
+      </div>
+    </div>
+
     <div class="error-msg" id="errorMsg"></div>
   </div>
 
@@ -194,10 +234,19 @@
 
 <script>
 let allPreviews = [], currentIdx = 0, currentAdId = '', currentAdName = '';
+let currentStatus = 'ALL';
 
 // ── Load accounts on startup ──────────────────────────────
 window.addEventListener('load', loadAccounts);
 document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+function setStatus(s) {
+  currentStatus = s;
+  document.querySelectorAll('.status-btn').forEach(b => b.className = 'status-btn');
+  if (s === 'ALL')    { document.getElementById('sAll').classList.add('all-btn'); }
+  if (s === 'ACTIVE') { document.getElementById('sActive').classList.add('active-btn'); }
+  if (s === 'PAUSED') { document.getElementById('sPaused').classList.add('paused-btn'); }
+}
 
 async function loadAccounts() {
   try {
@@ -236,8 +285,14 @@ async function doSearch() {
   const btn = document.getElementById('searchBtn');
   btn.disabled = true; btn.textContent = '⏳ กำลังค้นหา...';
 
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo   = document.getElementById('dateTo').value;
+  const params   = new URLSearchParams({ q, search_type: type, account_id: acct, status: currentStatus });
+  if (dateFrom) params.append('date_from', dateFrom);
+  if (dateTo)   params.append('date_to', dateTo);
+
   try {
-    const resp = await fetch(`/api/search?q=${encodeURIComponent(q)}&search_type=${type}&account_id=${acct}`);
+    const resp = await fetch(`/api/search?${params}`);
     const data = await resp.json();
     if (!resp.ok) { showError(data.detail || 'เกิดข้อผิดพลาด'); return; }
     renderResults(data.results, type);
@@ -257,13 +312,16 @@ function renderResults(results, type) {
     document.getElementById('resultsList').innerHTML = `<div class="empty"><div class="icon">🔍</div><p>ไม่พบรายการที่ตรงกัน</p></div>`;
     return;
   }
-  document.getElementById('resultsList').innerHTML = results.map((item, i) => `
+  document.getElementById('resultsList').innerHTML = results.map((item, i) => {
+    const date = item.created_time ? new Date(item.created_time).toLocaleDateString('th-TH', {day:'2-digit', month:'short', year:'numeric'}) : '';
+    return `
     <div class="result-item" id="ri-${i}" onclick="selectItem('${item.id}','${esc(item.name)}','${item.type}',${i})">
       <div class="result-name">${item.name}</div>
+      ${date ? `<div class="result-date">📅 ${date}</div>` : ''}
       <div class="result-id">ID: ${item.id}</div>
       <span class="badge ${badgeCls(item.status)}">${item.status || '—'}</span>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 async function selectItem(id, name, type, idx) {

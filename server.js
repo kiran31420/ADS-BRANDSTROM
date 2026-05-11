@@ -44,20 +44,33 @@ app.get('/api/accounts', async (req, res) => {
 
 // ── GET /api/search ───────────────────────────────────────
 app.get('/api/search', async (req, res) => {
-  const { q, search_type = 'ad', account_id } = req.query;
+  const { q, search_type = 'ad', account_id, status = 'ALL', date_from = '', date_to = '' } = req.query;
   if (!q || !account_id) return res.status(400).json({ error: 'q และ account_id จำเป็น' });
 
-  const filtering = JSON.stringify([{ field: 'name', operator: 'CONTAIN', value: q }]);
-  const endpoint  = search_type === 'campaign' ? 'campaigns' : 'ads';
-  const fields    = search_type === 'campaign' ? 'id,name,status,objective' : 'id,name,status';
+  const filters = [{ field: 'name', operator: 'CONTAIN', value: q }];
+  if (status !== 'ALL') {
+    filters.push({ field: 'effective_status', operator: 'IN', value: [status] });
+  }
 
-  const data = await fbGet(`${FB_BASE}/act_${account_id}/${endpoint}`, { fields, filtering, limit: 25 });
+  const endpoint = search_type === 'campaign' ? 'campaigns' : 'ads';
+  const fields   = search_type === 'campaign'
+    ? 'id,name,status,effective_status,created_time,start_time,objective'
+    : 'id,name,status,effective_status,created_time';
+
+  const params = { fields, filtering: JSON.stringify(filters), limit: 50 };
+  if (date_from) params.time_range = JSON.stringify({ since: date_from, until: date_to || new Date().toISOString().slice(0,10) });
+
+  const data = await fbGet(`${FB_BASE}/act_${account_id}/${endpoint}`, params);
   if (data.error) return res.status(400).json({ detail: data.error.message });
 
   res.json({
     results: (data.data || []).map(item => ({
-      id: item.id, name: item.name,
-      status: item.status || '', type: search_type,
+      id: item.id,
+      name: item.name,
+      status: item.effective_status || item.status || '',
+      type: search_type,
+      created_time: item.created_time || '',
+      start_time: item.start_time || '',
     }))
   });
 });
